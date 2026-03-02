@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TERRAFIX v2 — Off-Highway Navigation Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+
+<style>
+:root {
+  --bg: #0a0c10;
+  --bg2: #0f1318;
+  --bg3: #161b22;
+  --surface: #1c2230;
+  --surface2: #242d3d;
+  --border: #2a3448;
+  --border-light: #344058;
+
+  --green: #00e5a0;
+  --green-dim: #00e5a022;
+  --green-mid: #00e5a055;
+  --yellow: #f5c842;
+  --yellow-dim: #f5c84222;
+  --red: #ff4f6d;
+  --red-dim: #ff4f6d22;
+  --blue: #3d9eff;
+  --blue-dim: #3d9eff22;
+  --orange: #ff8c42;
+  --purple: #a78bfa;
+
+  --text: #e8edf5;
+  --text-dim: #8a96aa;
+  --text-faint: #4a5568;
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --font-body: 'DM Sans', sans-serif;
+
+  --radius: 8px;
+  --radius-lg: 14px;
+  --transition: 150ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 64px; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 16px 0; gap: 8px; flex-shrink: 0; z-index: 100;
+}
+.logo {
+  width: 36px; height: 36px; background: var(--green); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+}
+.logo svg { width: 20px; height: 20px; color: #000; }
+.nav-btn {
+  width: 40px; height: 40px; border-radius: var(--radius); border: none;
+  background: transparent; color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); position: relative;
+}
+.nav-btn:hover { background: var(--surface); color: var(--text); }
+.nav-btn.active { background: var(--green-dim); color: var(--green); }
+.nav-btn.active::before {
+  content: ''; position: absolute; left: -1px; top: 8px; bottom: 8px;
+  width: 2px; background: var(--green); border-radius: 0 2px 2px 0;
+}
+.nav-btn svg { width: 18px; height: 18px; }
+.sidebar-spacer { flex: 1; }
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{opacity:1;box-shadow:0 0 8px var(--green);}
+  50%{opacity:0.6;box-shadow:0 0 16px var(--green);}
+}
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TOPBAR */
+.topbar {
+  height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0;
+}
+.topbar-brand { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; letter-spacing: 0.05em; color: var(--green); }
+.topbar-brand span { color: var(--text-dim); font-weight: 400; }
+.topbar-divider { width: 1px; height: 24px; background: var(--border); }
+.mission-badge {
+  display: flex; align-items: center; gap: 6px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px 4px 8px;
+  font-size: 0.75rem; color: var(--text-dim);
+}
+.mission-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+.topbar-spacer { flex: 1; }
+.topbar-time { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.05em; }
+.alert-badge {
+  background: var(--red-dim); border: 1px solid var(--red); color: var(--red);
+  border-radius: 4px; padding: 3px 8px; font-size: 0.7rem; font-family: var(--font-mono); cursor: pointer;
+}
+.vehicle-selector {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); padding: 6px 10px; font-family: var(--font-body);
+  font-size: 0.8rem; cursor: pointer; outline: none;
+}
+.live-badge {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+  font-size: 0.6rem; color: var(--red); background: var(--red-dim);
+  border: 1px solid #ff4f6d44; border-radius: 3px; padding: 2px 6px;
+}
+.live-badge .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red); animation: pulse 1s infinite; }
+
+/* CONTENT GRID */
+.content { flex: 1; display: grid; grid-template-columns: 1fr 330px; grid-template-rows: 1fr 220px; overflow: hidden; }
+
+/* MAP PANEL */
+.map-panel { grid-column: 1; grid-row: 1; position: relative; background: var(--bg3); overflow: hidden; }
+#terrainCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+.map-overlays { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.map-overlays > * { pointer-events: auto; }
+
+/* Mode tabs */
+.mode-tabs { position: absolute; top: 14px; right: 14px; display: flex; gap: 4px; z-index: 20; }
+.mode-tab {
+  padding: 5px 10px; background: rgba(10,12,16,0.9); backdrop-filter: blur(8px);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-dim); cursor: pointer; transition: all var(--transition);
+}
+.mode-tab.active { background: var(--green-dim); border-color: var(--green-mid); color: var(--green); }
+.mode-tab:hover:not(.active) { background: var(--surface); color: var(--text); }
+
+.map-overlay-tl { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+.map-pill {
+  background: rgba(10,12,16,0.9); backdrop-filter: blur(8px); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 12px; font-family: var(--font-mono); font-size: 0.7rem;
+  color: var(--text-dim); display: flex; align-items: center; gap: 6px;
+}
+.map-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+.map-pill .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.map-pill .dot.yellow { background: var(--yellow); }
+.map-pill .dot.red { background: var(--red); animation: pulse 1s infinite; }
+
+.map-overlay-br { position: absolute; bottom: 14px; right: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 20; align-items: flex-end; }
+.map-legend {
+  background: rgba(10,12,16,0.9); backdrop-filter: blur(8px); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.68rem; color: var(--text-dim); }
+.legend-line { width: 20px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.legend-dashed { width: 20px; height: 0; flex-shrink: 0; border-top: 2px dashed var(--yellow); }
+
+/* MAP CONTROL BUTTONS */
+.map-ctrl-btn {
+  width: 32px; height: 32px;
+  background: rgba(10,12,16,0.9); backdrop-filter: blur(8px);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text-dim); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 1.1rem; font-weight: 700; transition: all var(--transition);
+  user-select: none; line-height: 1;
+}
+.map-ctrl-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-light); }
+.map-ctrl-btn:active { background: var(--green-dim); color: var(--green); border-color: var(--green-mid); }
+.map-ctrl-group { display: flex; flex-direction: column; gap: 4px; }
+
+/* DEAD-RECKONING BANNER */
+.dr-banner {
+  position: absolute; bottom: 14px; left: 14px; z-index: 20;
+  background: rgba(255,79,109,0.15); border: 1px solid var(--red); border-radius: var(--radius);
+  padding: 8px 14px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--red);
+  display: none; align-items: center; gap: 8px; animation: blink 1s infinite;
+  backdrop-filter: blur(8px);
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+
+/* RIGHT PANEL */
+.right-panel { grid-column: 2; grid-row: 1 / 3; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.right-top { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.right-bottom { border-top: 1px solid var(--border); padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+
+/* BOTTOM PANEL */
+.bottom-panel { grid-column: 1; grid-row: 2; border-top: 1px solid var(--border); display: flex; overflow: hidden; }
+
+.section-hdr { font-family: var(--font-mono); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); margin-bottom: 8px; }
+
+/* METRIC CARDS */
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; transition: border-color var(--transition);
+}
+.metric-card:hover { border-color: var(--border-light); }
+.metric-card.green { border-color: var(--green-mid); background: var(--green-dim); }
+.metric-card.yellow { border-color: #f5c84244; background: var(--yellow-dim); }
+.metric-card.red { border-color: #ff4f6d44; background: var(--red-dim); }
+.metric-label { font-size: 0.65rem; color: var(--text-faint); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+.metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text); line-height: 1; }
+.metric-value.green { color: var(--green); }
+.metric-value.yellow { color: var(--yellow); }
+.metric-value.red { color: var(--red); }
+.metric-sub { font-size: 0.65rem; color: var(--text-dim); }
+
+/* STATUS ROWS */
+.status-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.75rem; transition: all var(--transition);
+}
+.status-row:hover { background: var(--surface2); }
+.status-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.status-icon svg { width: 14px; height: 14px; }
+.status-icon.green { background: var(--green-dim); color: var(--green); }
+.status-icon.yellow { background: var(--yellow-dim); color: var(--yellow); }
+.status-icon.red { background: var(--red-dim); color: var(--red); }
+.status-icon.blue { background: var(--blue-dim); color: var(--blue); }
+.status-name { flex: 1; color: var(--text); font-weight: 500; }
+.status-val { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); }
+.status-state { font-size: 0.65rem; font-family: var(--font-mono); padding: 2px 6px; border-radius: 3px; }
+.status-state.ok { background: var(--green-dim); color: var(--green); }
+.status-state.warn { background: var(--yellow-dim); color: var(--yellow); }
+.status-state.fault { background: var(--red-dim); color: var(--red); }
+.status-state.off { background: var(--surface2); color: var(--text-faint); }
+
+/* INTEGRITY BAR */
+.integrity-bar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.integrity-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.integrity-label { font-size: 0.7rem; color: var(--text-dim); }
+.integrity-val { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--green); }
+.bar-track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--green) 0%, #00e5a0cc 100%); transition: width 1s ease; }
+.bar-fill.yellow { background: linear-gradient(90deg, var(--yellow), #f5c84299); }
+.bar-fill.red { background: linear-gradient(90deg, var(--red), #ff4f6d99); }
+.bar-labels { display: flex; justify-content: space-between; }
+.bar-label { font-size: 0.6rem; color: var(--text-faint); font-family: var(--font-mono); }
+
+/* ALERTS */
+.alert-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+.alert-item:last-child { border-bottom: none; }
+.alert-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.alert-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.alert-dot.yellow { background: var(--yellow); }
+.alert-dot.blue { background: var(--blue); }
+.alert-msg { flex: 1; color: var(--text-dim); line-height: 1.4; }
+.alert-msg strong { color: var(--text); }
+.alert-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-faint); flex-shrink: 0; }
+
+/* CHART */
+.chart-section { flex: 1; display: flex; flex-direction: column; padding: 14px 16px; overflow: hidden; border-right: 1px solid var(--border); }
+.chart-wrap { flex: 1; position: relative; }
+canvas { display: block; }
+
+/* CONSTELLATION */
+.constellation-section { width: 200px; border-right: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.sat-legend { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.sat-tag { font-size: 0.6rem; font-family: var(--font-mono); color: var(--text-faint); display: flex; align-items: center; gap: 4px; }
+.sat-tag-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* FUSION TABLE */
+.fusion-section { width: 220px; padding: 14px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.fusion-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; }
+.fusion-name { width: 70px; color: var(--text-dim); flex-shrink: 0; font-family: var(--font-mono); font-size: 0.65rem; }
+.fusion-bar-wrap { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+.fusion-bar { height: 100%; border-radius: 2px; transition: width 1.5s ease; }
+.fusion-pct { width: 32px; text-align: right; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); flex-shrink: 0; }
+
+/* TABS */
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tab { padding: 6px 14px; font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-faint); cursor: pointer; border-bottom: 2px solid transparent; transition: all var(--transition); text-transform: uppercase; letter-spacing: 0.08em; }
+.tab:hover { color: var(--text-dim); }
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* VEHICLE HDR */
+.vehicle-hdr { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 2px; }
+.vehicle-id { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.vehicle-type { font-size: 0.7rem; color: var(--text-dim); }
+.vehicle-icon { font-size: 1.4rem; }
+
+/* BUTTONS */
+.small-btn {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 10px; color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono);
+  cursor: pointer; transition: all var(--transition);
+}
+.small-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border-light); }
+.small-btn.primary { background: var(--green-dim); border-color: var(--green-mid); color: var(--green); }
+
+.red-btn {
+  background: var(--red-dim); border: 1px solid var(--red); color: black; border-radius: var(--radius);
+  padding: 6px 8px; color: var(--red); font-size: 0.8rem; font-family: var(--font-mono); font-weight: 700;
+  cursor: pointer; transition: all var(--transition);
+  
+}
+.red-btn:hover { border-color: var(--red-dim); }
+
+/* MODAL */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; width: 680px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.6); position: relative; }
+.modal-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1.2rem; }
+.modal-section { margin-bottom: 20px; }
+
+.fault-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.fault-table th { text-align: left; padding: 6px 10px; font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+.fault-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: middle; }
+.fault-table tr:hover td { background: var(--surface); color: var(--text); }
+
+/* VIEW OVERLAYS */
+.view-overlay { position: fixed; top: 56px; left: 64px; right: 0; bottom: 0; background: var(--bg); z-index: 200; overflow-y: auto; padding: 24px; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+.view-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.view-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.view-sub { font-size: 0.8rem; color: var(--text-dim); }
+
+/* FLEET */
+.fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.fleet-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: border-color var(--transition); }
+.fleet-card:hover { border-color: var(--border-light); }
+.fleet-card.active-vehicle { border-color: var(--green-mid); background: #00e5a008; }
+.fleet-card-header { display: flex; align-items: center; gap: 10px; }
+.fleet-icon { font-size: 1.8rem; }
+.fleet-name { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; }
+.fleet-type { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
+.fleet-online { margin-left: auto; }
+.fleet-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.fleet-metric { background: var(--surface); border-radius: var(--radius); padding: 8px 10px; }
+.fleet-metric-label { font-size: 0.6rem; font-family: var(--font-mono); color: var(--text-faint); text-transform: uppercase; margin-bottom: 3px; }
+.fleet-metric-val { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; }
+.fleet-bar-row { display: flex; flex-direction: column; gap: 4px; }
+.fleet-bar-label { font-size: 0.68rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+
+/* ROUTES */
+.routes-list { display: flex; flex-direction: column; gap: 12px; max-width: 900px; }
+.route-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; transition: border-color var(--transition); cursor: pointer; }
+.route-card:hover { border-color: var(--border-light); }
+.route-card.route-active { border-left: 3px solid var(--green); }
+.route-card.route-pending { border-left: 3px solid var(--yellow); }
+.route-card.route-done { border-left: 3px solid var(--text-faint); }
+.route-id { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--text); }
+.route-name { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
+.route-detail { font-size: 0.72rem; color: var(--text-faint); margin-top: 4px; font-family: var(--font-mono); }
+.route-stats { display: flex; gap: 20px; align-items: center; }
+.route-stat { text-align: center; }
+.route-stat-val { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; }
+.route-stat-lbl { font-size: 0.6rem; color: var(--text-faint); text-transform: uppercase; }
+.route-progress-wrap { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.route-progress-fill { height: 100%; border-radius: 2px; }
+
+/* SENSORS */
+.sensors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+.sensor-detail-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.sensor-detail-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.sensor-detail-name { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; }
+.sensor-detail-params { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sensor-param { background: var(--surface); border-radius: var(--radius); padding: 8px 10px; }
+.sensor-param-label { font-size: 0.6rem; font-family: var(--font-mono); color: var(--text-faint); text-transform: uppercase; margin-bottom: 3px; }
+.sensor-param-val { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; }
+.sensor-health-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.sensor-health-fill { height: 100%; border-radius: 3px; }
+
+/* Map canvas */
+#terrainCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <button class="nav-btn active" id="nav-dashboard" title="Dashboard" onclick="switchView('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </button>
+    <button class="nav-btn" id="nav-fleet" title="Fleet Overview" onclick="switchView('fleet',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </button>
+    <button class="nav-btn" id="nav-routes" title="Mission Routes" onclick="switchView('routes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <button class="nav-btn" id="nav-sensors" title="Sensor Health" onclick="switchView('sensors',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </button>
+
+    <button class="nav-btn" id="nav-alerts" title="Fault Register" onclick="openFaultModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <div class="sidebar-spacer"></div>
+    <div class="status-dot"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-brand">TERRA<span>FIX</span></span>
+      <div class="topbar-divider"></div>
+      <div class="mission-badge"><div class="dot"></div><span id="missionLabel">MISSION ACTIVE — ROUTE C7-NORTH</span></div>
+      <div class="topbar-spacer"></div>
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+      <div class="topbar-time" id="clockEl">--:--:-- UTC</div>
+      <button class="alert-badge" id="alertBadge" onclick="openFaultModal()">⚠ 2 ACTIVE FAULTS</button>
+      <select class="vehicle-selector" id="vehicleSelect" onchange="changeVehicle(this.value)">
+        <option value="LDR-001">LDR-001 — Loader Alpha</option>
+        <option value="DMP-003">DMP-003 — Dumper Beta</option>
+        <option value="TRC-007">TRC-007 — Tractor Gamma</option>
+      </select>
+    </div>
+
+    <div class="content">
+      <!-- MAP PANEL -->
+      <div class="map-panel">
+        <canvas id="terrainCanvas"></canvas>
+        <div class="map-overlays">
+          <div class="mode-tabs">
+            <div class="mode-tab active" onclick="setMapLayer('osm',this)">OSM</div>
+            <div class="mode-tab" onclick="setMapLayer('sat',this)">SATELLITE</div>
+            <div class="mode-tab" onclick="setMapLayer('topo',this)">TERRAIN</div>
+          </div>
+          <div class="map-overlay-tl">
+            <div class="map-pill"><div class="dot green" id="fixDot"></div><span id="gnssFixText">RTK-FIXED · 8 SATS · PDOP 1.2</span></div>
+            <div class="map-pill" id="modePill"><div class="dot green"></div><span id="fusionModeText">GNSS+INS+LiDAR FUSION — ACTIVE</span></div>
+            <div class="map-pill"><div class="dot yellow"></div><span id="posErrText">HPE 0.18 m · VPE 0.31 m</span></div>
+          </div>
+          <div class="dr-banner" id="drBanner">
+            ⚠ GNSS DENIED — DEAD RECKONING (INS+LiDAR+Odometry)
+          </div>
+          <div class="map-overlay-br">
+            <div class="map-legend">
+              <div class="legend-row"><div class="legend-line" style="background:var(--green)"></div><span>Planned Route</span></div>
+              <div class="legend-row"><div class="legend-line" style="background:var(--blue)"></div><span>Traversed Path</span></div>
+              <div class="legend-row"><div class="legend-dashed"></div><span>Geofence</span></div>
+              <div class="legend-row"><div class="legend-line" style="background:var(--red)"></div><span>GNSS Denied Zone</span></div>
+            </div>
+            <div class="map-ctrl-group">
+              <div class="map-ctrl-btn" onclick="mapZoom(1.25)" title="Zoom In">+</div>
+              <div class="map-ctrl-btn" onclick="mapZoom(0.8)" title="Zoom Out">−</div>
+              <div class="map-ctrl-btn" onclick="mapCenter()" title="Center on Vehicle" style="font-size:0.8rem;">⊕</div>
+              <div class="map-ctrl-btn" onclick="toggleFollow(this)" id="followBtn" title="Follow Vehicle" style="font-size:0.7rem;color:var(--green);border-color:var(--green-mid);background:var(--green-dim);">⟳</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM PANEL -->
+      <div class="bottom-panel">
+        <div class="chart-section">
+          <div class="tab-bar">
+            <div class="tab active" onclick="switchChart('position',this)">POSITION ERROR</div>
+            <div class="tab" onclick="switchChart('integrity',this)">INTEGRITY</div>
+            <div class="tab" onclick="switchChart('velocity',this)">VELOCITY</div>
+            <div class="tab" onclick="switchChart('drift',this)">DRIFT</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chartCanvas"></canvas>
+          </div>
+        </div>
+        <div class="constellation-section">
+          <div class="section-hdr">Sky View — GNSS Constellation</div>
+          <canvas id="skyCanvas" width="160" height="160"></canvas>
+          <div class="sat-legend">
+            <div class="sat-tag"><div class="sat-tag-dot" style="background:#00e5a0"></div>GPS</div>
+            <div class="sat-tag"><div class="sat-tag-dot" style="background:#3d9eff"></div>GLONASS</div>
+            <div class="sat-tag"><div class="sat-tag-dot" style="background:#f5c842"></div>Galileo</div>
+            <div class="sat-tag"><div class="sat-tag-dot" style="background:#ff8c42"></div>BeiDou</div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-faint);text-align:center;" id="satCountLabel">8 SVs in use / 14 visible</div>
+        </div>
+        <div class="fusion-section">
+          <div class="section-hdr">Sensor Fusion Weights (EKF)</div>
+          <div id="fusionRows"></div>
+          <div style="margin-top:10px;">
+            <div class="section-hdr">Live Alerts</div>
+            <div id="alertList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+        <div class="right-top fade-in">
+          <div class="vehicle-hdr">
+            <span class="vehicle-icon">🚜</span>
+            <div>
+              <div class="vehicle-id" id="vehicleId">LDR-001</div>
+              <div class="vehicle-type" id="vehicleTypeLabel">Caterpillar 966 Loader · Mining Site</div>
+            </div>
+          </div>
+          <div>
+            <div class="section-hdr">Core Position Metrics</div>
+            <div class="metric-grid">
+              <div class="metric-card green" id="card-cep95">
+                <div class="metric-label">CEP95</div>
+                <div class="metric-value green" id="cep95">0.23m</div>
+                <div class="metric-sub">Target ≤ 1.0m</div>
+              </div>
+              <div class="metric-card" id="card-heading">
+                <div class="metric-label">Heading Err</div>
+                <div class="metric-value" id="headingErr">0.31°</div>
+                <div class="metric-sub">Target ≤ 1.0°</div>
+              </div>
+              <div class="metric-card green">
+                <div class="metric-label">Availability</div>
+                <div class="metric-value green" id="availability">99.7%</div>
+                <div class="metric-sub">8h session</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Pose Rate</div>
+                <div class="metric-value" id="poseRate">25Hz</div>
+                <div class="metric-sub">Target ≥ 10Hz</div>
+              </div>
+              <div class="metric-card green" id="card-latency">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value green" id="latency">42ms</div>
+                <div class="metric-sub">Target &lt;100ms</div>
+              </div>
+              <div class="metric-card yellow" id="card-drift">
+                <div class="metric-label">Drift/min</div>
+                <div class="metric-value yellow" id="drift">0.41m</div>
+                <div class="metric-sub">Target ≤ 1m/min</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-hdr">System Integrity (RAIM-inspired)</div>
+            <div class="integrity-bar-wrap">
+              <div class="integrity-header">
+                <span class="integrity-label">Overall Integrity Score</span>
+                <span class="integrity-val" id="integrityVal">94.2%</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" id="integrityBar" style="width:94.2%"></div></div>
+              <div class="bar-labels"><span class="bar-label">0%</span><span class="bar-label">50%</span><span class="bar-label">100%</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-hdr">Sensor Suite Status</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div class="status-row" id="row-gnss">
+                <div class="status-icon green" id="icon-gnss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+                <span class="status-name">GNSS Dual-Freq</span>
+                <span class="status-val" id="gnss-val">8 SVs · L1/L2</span>
+                <span class="status-state ok" id="gnss-state">RTK-FIX</span>
+              </div>
+              <div class="status-row">
+                <div class="status-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                <span class="status-name">IMU Tactical</span>
+                <span class="status-val" id="imu-val">200Hz · Bias OK</span>
+                <span class="status-state ok" id="imu-state">ACTIVE</span>
+              </div>
+              <div class="status-row">
+                <div class="status-icon green" id="icon-lidar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+                <span class="status-name">LiDAR 3D</span>
+                <span class="status-val" id="lidar-val">10Hz · 128ch</span>
+                <span class="status-state ok" id="lidar-state">ACTIVE</span>
+              </div>
+              <div class="status-row" id="row-camera">
+                <div class="status-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+                <span class="status-name">Camera Stereo</span>
+                <span class="status-val">20Hz · Lens blur</span>
+                <span class="status-state warn">DEGRADED</span>
+              </div>
+              <div class="status-row">
+                <div class="status-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <span class="status-name">Wheel Odometry</span>
+                <span class="status-val">100Hz · 4-wheel</span>
+                <span class="status-state ok" id="odom-state">ACTIVE</span>
+              </div>
+              <div class="status-row">
+                <div class="status-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div>
+                <span class="status-name">RTK Base</span>
+                <span class="status-val" id="rtk-val">Link OK · 1Hz corr</span>
+                <span class="status-state ok" id="rtk-state">CONNECTED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="right-bottom">
+          <div class="section-hdr">Session Summary</div>
+          <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">Distance</div><div class="metric-value" id="distance">3.24km</div></div>
+            <div class="metric-card"><div class="metric-label">Duration</div><div class="metric-value" id="duration">01:47:22</div></div>
+            <div class="metric-card"><div class="metric-label">GNSS Outages</div><div class="metric-value yellow" id="outages">2</div></div>
+            <div class="metric-card"><div class="metric-label">Speed</div><div class="metric-value" id="speed">8.3km/h</div></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap;">
+            <button class="small-btn primary" onclick="openFaultModal()">🛡 Integrity Report</button>
+            <button class="small-btn" onclick="exportData()">⬇ Export JSON</button>
+            <button class="red-btn" onclick="simulateFault()">⚡ Sim GNSS Deny</button>
+            <button class="red-btn" onclick="simulateSensorFault()" id="sensorFaultBtn">⚠ Sim Sensor Fault</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /.content -->
+  </div><!-- /.main -->
+</div><!-- /.app -->
+
+<!-- ===== VIEW OVERLAYS ===== -->
+<div id="view-fleet" class="view-overlay" style="display:none;">
+  <div class="view-header">
+    <div><div class="view-title">Fleet Overview</div><div class="view-sub">3 vehicles active · Site: Khandwa Mining Zone C</div></div>
+    <button class="small-btn" onclick="switchView('dashboard',document.getElementById('nav-dashboard'))">← Dashboard</button>
+  </div>
+  <div class="fleet-grid" id="fleetGrid"></div>
+</div>
+
+<div id="view-routes" class="view-overlay" style="display:none;">
+  <div class="view-header">
+    <div><div class="view-title">Mission Routes</div><div class="view-sub">Planned &amp; active routes — current shift</div></div>
+    <button class="small-btn" onclick="switchView('dashboard',document.getElementById('nav-dashboard'))">← Dashboard</button>
+  </div>
+  <div class="routes-list" id="routesList"></div>
+</div>
+
+<div id="view-sensors" class="view-overlay" style="display:none;">
+  <div class="view-header">
+    <div><div class="view-title">Sensor Health Monitor</div><div class="view-sub">Detailed diagnostics — all sensor subsystems</div></div>
+    <button class="small-btn" onclick="switchView('dashboard',document.getElementById('nav-dashboard'))">← Dashboard</button>
+  </div>
+  <div class="sensors-grid" id="sensorsGrid"></div>
+</div>
+
+
+
+
+
+<!-- FAULT MODAL -->
+<div class="modal-backdrop" id="faultModal" onclick="closeFaultModal(event)">
+  <div class="modal">
+    <div class="modal-title">🛡 Integrity Monitor & Fault Register</div>
+    <button class="modal-close" onclick="document.getElementById('faultModal').classList.remove('open')">✕</button>
+    <div class="modal-section">
+      <div class="section-hdr">Active & Recent Faults</div>
+      <table class="fault-table"><thead><tr><th>SEVERITY</th><th>SENSOR</th><th>DESCRIPTION</th><th>TIME</th><th>STATUS</th></tr></thead>
+        <tbody id="faultBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-section">
+      <div class="section-hdr">Integrity Breakdown by Subsystem</div>
+      <div id="integrityBreakdown" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="small-btn" onclick="clearFaults()">Clear Resolved</button>
+      <button class="small-btn primary" onclick="exportData()">Export Report</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// TERRAFIX v2 — Off-Highway Navigation Intelligence Platform
+// Upgraded: Real map tiles, EKF simulation, GNSS-denied behavioral
+// response, architecture diagram, pilot report, risk register
+// ================================================================
+
+// ===== CLOCK =====
+function updateClock(){
+  const n=new Date();
+  // Show local time with timezone abbreviation
+  const timeStr = n.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  const tzName = n.toLocaleDateString([], {timeZoneName:'short'}).split(',').pop().trim() ||
+    'GMT' + (n.getTimezoneOffset() <= 0 ? '+' : '-') + 
+    String(Math.abs(Math.floor(n.getTimezoneOffset()/60))).padStart(2,'0') + ':' +
+    String(Math.abs(n.getTimezoneOffset()%60)).padStart(2,'0');
+  document.getElementById('clockEl').textContent=timeStr+' '+tzName;
+}
+setInterval(updateClock,1000); updateClock();
+
+// ===== EKF-INSPIRED SIMULATION STATE =====
+// Simple 2D EKF state: [x, y, vx, vy]
+// Process noise covariance, measurement noise by sensor mode
+const ekf = {
+  x: 0, y: 0, vx: 0.002, vy: 0.001, // state in degrees
+  P: [[1e-7,0,0,0],[0,1e-7,0,0],[0,0,1e-9,0],[0,0,0,1e-9]], // covariance
+  Q_gnss: 1e-11, Q_ins: 1e-9, Q_dr: 1e-7, // process noise
+  mode: 'gnss', // 'gnss', 'float', 'dr'
+  
+  propagate(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    // small random walk on velocity
+    this.vx += rnd(-0.0001, 0.0001) * dt;
+    this.vy += rnd(-0.0001, 0.0001) * dt;
+    // Clamp within route area
+    if (this.x > routeBounds.maxLng || this.x < routeBounds.minLng) this.vx *= -1;
+    if (this.y > routeBounds.maxLat || this.y < routeBounds.minLat) this.vy *= -1;
+  },
+  
+  getMeasurementNoise() {
+    switch(this.mode) {
+      case 'gnss': return 0.00001; // ~1m
+      case 'float': return 0.0002; // ~20m
+      case 'dr': return 0.001; // dead-reckoning, grows with time
+    }
+  }
+};
+
+// Route bounds for the demo area (Leeds/Wakefield mining site)
+const routeBounds = {
+  minLat: 53.740, maxLat: 53.760,
+  minLng: -1.560, maxLng: -1.520
+};
+
+// Pre-compute route waypoints
+const routeWaypoints = [];
+function buildRouteWaypoints() {
+  routeWaypoints.length = 0;
+  const lats = [53.741, 53.745, 53.750, 53.755, 53.758, 53.755, 53.750, 53.745, 53.748, 53.752, 53.757, 53.759, 53.755, 53.749];
+  const lngs = [-1.555, -1.548, -1.545, -1.542, -1.538, -1.535, -1.532, -1.530, -1.527, -1.525, -1.525, -1.530, -1.535, -1.540];
+  for (let i = 0; i < lats.length; i++) {
+    // interpolate 20 points per segment
+    if (i < lats.length - 1) {
+      for (let s = 0; s < 20; s++) {
+        const t = s / 20;
+        routeWaypoints.push([
+          lats[i] + (lats[i+1]-lats[i])*t + rnd(-0.0003,0.0003),
+          lngs[i] + (lngs[i+1]-lngs[i])*t + rnd(-0.0003,0.0003)
+        ]);
+      }
+    }
+  }
+  routeWaypoints.push([lats[lats.length-1], lngs[lats.length-1]]);
+}
+buildRouteWaypoints();
+
+// GNSS-denied zones (lat, lng, radius in deg)
+const gnssDeniedZones = [
+  { lat: 53.750, lng: -1.540, r: 0.004, label: 'Zone A — Dense Canopy' },
+  { lat: 53.755, lng: -1.527, r: 0.003, label: 'Zone B — Urban Canyon' },
+];
+
+function isInDeniedZone(lat, lng) {
+  for (const z of gnssDeniedZones) {
+    const d = Math.hypot(lat-z.lat, lng-z.lng);
+    if (d < z.r) return z;
+  }
+  return null;
+}
+
+// Main state
+const state = {
+  travelIdx: 0,
+  cep95: 0.23,
+  headingErr: 0.31,
+  availability: 99.7,
+  latency: 42,
+  drift: 0.41,
+  poseRate: 25,
+  integrity: 94.2,
+  speed: 8.3,
+  distance: 3.24,
+  sessionSeconds: 6442,
+  gnssMode: 'RTK-FIX',
+  satsUsed: 8,
+  satsVisible: 14,
+  pdop: 1.2,
+  hpe: 0.18,
+  vpe: 0.31,
+  deniedZone: null,
+  drSeconds: 0, // time in dead reckoning
+  currentChart: 'position',
+  positionHistory: [],
+  integrityHistory: [],
+  velocityHistory: [],
+  driftHistory: [],
+  fusionWeights: { 'GNSS/RTK': 42, 'IMU/INS': 28, 'LiDAR SLAM': 18, 'Wheel Odom': 8, 'Visual IO': 4 },
+  faultSimActive: false,
+  outageCount: 2,
+};
+
+// Pre-fill 120s history
+for (let i = 0; i < 120; i++) {
+  state.positionHistory.push({ t: Date.now()-(120-i)*1000, v: 0.2+Math.random()*0.15 });
+  state.integrityHistory.push({ t: Date.now()-(120-i)*1000, v: 93+Math.random()*3 });
+  state.velocityHistory.push({ t: Date.now()-(120-i)*1000, v: 7+Math.random()*3 });
+  state.driftHistory.push({ t: Date.now()-(120-i)*1000, v: 0.3+Math.random()*0.2 });
+}
+
+const faults = [
+  { severity:'WARN', sensor:'Stereo Camera', desc:'Lens contamination — VIO weight reduced, LiDAR compensating', time:'09:23:14', status:'ACTIVE' },
+  { severity:'INFO', sensor:'GNSS', desc:'RTK float 4s in Zone B — now re-fixed', time:'09:41:08', status:'RESOLVED' },
+  { severity:'INFO', sensor:'IMU', desc:'Temp compensation updated at 52°C', time:'08:55:32', status:'RESOLVED' },
+  { severity:'WARN', sensor:'Wheel Odom', desc:'Slip FR wheel — corrected by INS', time:'09:15:45', status:'ACTIVE' },
+];
+
+function rnd(a,b){return a+Math.random()*(b-a);}
+function clamp(v,mn,mx){return Math.min(mx,Math.max(mn,v));}
+
+// ===== MAIN SIMULATION LOOP =====
+setInterval(() => {
+  // Advance vehicle along route
+  if (state.travelIdx < routeWaypoints.length - 1) {
+    state.travelIdx += 0.625;
+    if (state.travelIdx >= routeWaypoints.length) state.travelIdx = 0;
+  } else {
+    state.travelIdx = 0; // loop
+  }
+
+  const wp = routeWaypoints[Math.floor(state.travelIdx)];
+  if (!wp) return;
+  
+  // Check if in GNSS-denied zone
+  const denied = isInDeniedZone(wp[0], wp[1]);
+  const wasInDenied = state.deniedZone !== null;
+  
+  if (denied && !state.faultSimActive) {
+    // Enter denied zone behavior
+    state.deniedZone = denied;
+    ekf.mode = 'dr';
+    state.drSeconds++;
+    state.gnssMode = 'DEAD-RECK';
+    state.satsUsed = Math.max(0, Math.floor(rnd(0, 2)));
+    state.pdop = clamp(state.pdop + rnd(1, 3), 5, 20);
+    state.cep95 = clamp(state.cep95 + 0.01 * state.drSeconds * 0.1, 0.5, 2.5);
+    state.integrity = clamp(state.integrity - 0.3, 72, 99);
+    state.drift = clamp(state.drift + rnd(0.02, 0.05), 0.3, 1.5);
+    state.hpe = clamp(state.hpe + rnd(0.05, 0.15), 0.3, 3.0);
+    
+    // Fusion weights shift: GNSS → INS+LiDAR+Odometry
+    state.fusionWeights['GNSS/RTK'] = clamp(state.fusionWeights['GNSS/RTK'] - 2, 2, 50);
+    state.fusionWeights['IMU/INS'] = clamp(state.fusionWeights['IMU/INS'] + 0.8, 0, 55);
+    state.fusionWeights['LiDAR SLAM'] = clamp(state.fusionWeights['LiDAR SLAM'] + 0.8, 0, 45);
+    state.fusionWeights['Wheel Odom'] = clamp(state.fusionWeights['Wheel Odom'] + 0.4, 0, 25);
+    
+    document.getElementById('drBanner').style.display = 'flex';
+  } else if (!denied && wasInDenied) {
+    // Exit denied zone — re-acquire GNSS
+    state.deniedZone = null;
+    ekf.mode = 'gnss';
+    state.drSeconds = 0;
+    state.gnssMode = 'RTK-FIX';
+    state.satsUsed = 8;
+    state.pdop = 1.2;
+    state.outageCount++;
+    document.getElementById('drBanner').style.display = 'none';
+    // Fusion weights normalize back
+    state.fusionWeights = { 'GNSS/RTK': 42, 'IMU/INS': 28, 'LiDAR SLAM': 18, 'Wheel Odom': 8, 'Visual IO': 4 };
+  } else if (!denied && !state.faultSimActive) {
+    // Normal operation — subtle EKF-style jitter
+    state.drSeconds = 0;
+    state.gnssMode = 'RTK-FIX';
+    state.cep95 = clamp(state.cep95 + rnd(-0.015,0.015), 0.12, 0.65);
+    state.headingErr = clamp(state.headingErr + rnd(-0.04,0.04), 0.1, 1.2);
+    state.latency = clamp(state.latency + rnd(-2,2), 22, 75);
+    state.drift = clamp(state.drift + rnd(-0.02,0.02), 0.15, 0.65);
+    state.integrity = clamp(state.integrity + rnd(-0.3,0.3), 88, 99.9);
+    state.hpe = clamp(state.hpe + rnd(-0.01,0.01), 0.05, 0.35);
+    state.vpe = clamp(state.vpe + rnd(-0.015,0.015), 0.1, 0.5);
+    // Normalize fusion weights
+    const total = Object.values(state.fusionWeights).reduce((a,b)=>a+b,0);
+    for (const k in state.fusionWeights) state.fusionWeights[k] = (state.fusionWeights[k]/total)*100;
+  }
+
+  state.speed = clamp(state.speed + rnd(-0.3,0.3), 2, 18);
+  state.distance += state.speed / 3600;
+  state.sessionSeconds++;
+  state.headingErr = clamp(state.headingErr + rnd(-0.04,0.04), 0.1, 1.6);
+
+  // Push history
+  const now = Date.now();
+  state.positionHistory.push({ t: now, v: state.cep95 });
+  state.integrityHistory.push({ t: now, v: state.integrity });
+  state.velocityHistory.push({ t: now, v: state.speed });
+  state.driftHistory.push({ t: now, v: state.drift });
+  if (state.positionHistory.length > 200) {
+    state.positionHistory.shift(); state.integrityHistory.shift();
+    state.velocityHistory.shift(); state.driftHistory.shift();
+  }
+
+  // Update all UI
+  updateMetricUI();
+  updateMapMarker();
+  renderFusionRows();
+  renderAlerts();
+  renderSkyPlot();
+  renderLineChart();
+}, 1000);
+
+// ===== METRIC UI =====
+function updateMetricUI() {
+  const v = state;
+  const inDenied = v.deniedZone !== null || v.faultSimActive;
+
+  // CEP95
+  setText('cep95', v.cep95.toFixed(2)+'m');
+  const cepCard = document.getElementById('card-cep95');
+  if (v.cep95 > 1.5) { cepCard.className='metric-card red'; document.getElementById('cep95').className='metric-value red'; }
+  else if (v.cep95 > 0.8) { cepCard.className='metric-card yellow'; document.getElementById('cep95').className='metric-value yellow'; }
+  else { cepCard.className='metric-card green'; document.getElementById('cep95').className='metric-value green'; }
+
+  setText('headingErr', v.headingErr.toFixed(2)+'°');
+  setText('availability', v.availability.toFixed(1)+'%');
+  setText('poseRate', '25Hz');
+  setText('latency', Math.round(v.latency)+'ms');
+  setText('drift', v.drift.toFixed(2)+'m');
+  const driftCard = document.getElementById('card-drift');
+  if (v.drift > 1.0) driftCard.className='metric-card red';
+  else if (v.drift > 0.6) driftCard.className='metric-card yellow';
+  else driftCard.className='metric-card';
+
+  setText('integrityVal', v.integrity.toFixed(1)+'%');
+  const bar = document.getElementById('integrityBar');
+  bar.style.width = v.integrity+'%';
+  bar.className = 'bar-fill' + (v.integrity > 88 ? '' : v.integrity > 75 ? ' yellow' : ' red');
+  const iv = document.getElementById('integrityVal');
+  iv.style.color = v.integrity > 88 ? 'var(--green)' : v.integrity > 75 ? 'var(--yellow)' : 'var(--red)';
+
+  setText('distance', v.distance.toFixed(2)+'km');
+  setText('speed', v.speed.toFixed(1)+'km/h');
+  setText('outages', v.outageCount);
+
+  const h = Math.floor(v.sessionSeconds/3600);
+  const m = Math.floor((v.sessionSeconds%3600)/60);
+  const s = v.sessionSeconds%60;
+  setText('duration', `${pad(h)}:${pad(m)}:${pad(s)}`);
+
+  // GNSS fix status
+  if (inDenied) {
+    setText('gnssFixText', `DEAD-RECK · ${v.satsUsed} SATS · PDOP ${v.pdop.toFixed(1)}`);
+    setText('posErrText', `HPE ${v.hpe.toFixed(2)}m · VPE ${v.vpe.toFixed(2)}m [DR]`);
+    setText('gnss-val', `${v.satsUsed} SVs · L1/L2`);
+    setText('gnss-state', 'DEAD-RECK');
+    document.getElementById('gnss-state').className='status-state fault';
+    setText('rtk-val', 'Link OK · 1Hz corr');
+    setText('rtk-state', 'WEAK');
+    document.getElementById('rtk-state').className='status-state warn';
+    document.getElementById('fixDot').className='dot red';
+    document.getElementById('fusionModeText').textContent='INS+LiDAR+ODOM FALLBACK — DR MODE';
+  } else {
+    setText('gnssFixText', `RTK-FIXED · ${v.satsUsed} SATS · PDOP ${v.pdop.toFixed(1)}`);
+    setText('posErrText', `HPE ${v.hpe.toFixed(2)}m · VPE ${v.vpe.toFixed(2)}m`);
+    setText('gnss-val', `${v.satsUsed} SVs · L1/L2`);
+    setText('gnss-state', 'RTK-FIX');
+    document.getElementById('gnss-state').className='status-state ok';
+    setText('rtk-state', 'CONNECTED');
+    document.getElementById('rtk-state').className='status-state ok';
+    document.getElementById('fixDot').className='dot green';
+    document.getElementById('fusionModeText').textContent='GNSS+INS+LiDAR FUSION — ACTIVE';
+  }
+  setText('satCountLabel', `${v.satsUsed} SVs in use / ${v.satsVisible} visible`);
+}
+
+function setText(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// ===== TERRAIN CANVAS MAP =====
+let traveledCoords = [];
+let mapZoomLevel = 1.0;
+let mapOffsetX = 0, mapOffsetY = 0;
+let mapDragging = false, mapDragStart = {x:0,y:0};
+let currentMapMode = 'osm';
+let terrainCanvas, terrainCtx;
+let animFrame = 0;
+
+function initTerrainCanvas() {
+  terrainCanvas = document.getElementById('terrainCanvas');
+  if (!terrainCanvas) return;
+  terrainCtx = terrainCanvas.getContext('2d');
+  
+  function resize() {
+    const r = terrainCanvas.parentElement.getBoundingClientRect();
+    terrainCanvas.width = r.width;
+    terrainCanvas.height = r.height;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  
+  // Drag to pan
+  terrainCanvas.addEventListener('mousedown', e => {
+    mapDragging = true;
+    mapDragStart = {x: e.clientX - mapOffsetX, y: e.clientY - mapOffsetY};
+  });
+  window.addEventListener('mousemove', e => {
+    if (!mapDragging) return;
+    mapOffsetX = e.clientX - mapDragStart.x;
+    mapOffsetY = e.clientY - mapDragStart.y;
+  });
+  window.addEventListener('mouseup', () => mapDragging = false);
+  terrainCanvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    mapZoomLevel = clamp(mapZoomLevel * (e.deltaY < 0 ? 1.12 : 0.9), 0.4, 5);
+  }, {passive: false});
+
+  drawTerrainMap();
+}
+
+function drawTerrainMap() {
+  if (!terrainCanvas || !terrainCtx) { requestAnimationFrame(drawTerrainMap); return; }
+  const W = terrainCanvas.width, H = terrainCanvas.height;
+  const ctx = terrainCtx;
+  const inDenied = state.deniedZone !== null || state.faultSimActive;
+  animFrame++;
+
+  // Convert route lat/lng to screen coords
+  const latCenter = 53.750, lngCenter = -1.540;
+  const scale = 22000 * mapZoomLevel;
+  const ox = W/2 + mapOffsetX, oy = H/2 + mapOffsetY;
+  
+  function toScreen(lat, lng) {
+    return {
+      x: ox + (lng - lngCenter) * scale,
+      y: oy - (lat - latCenter) * scale * 1.4
+    };
+  }
+
+  // ---- BACKGROUND ----
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  if (currentMapMode === 'sat') {
+    bg.addColorStop(0, '#0a150a'); bg.addColorStop(1, '#0d1a10');
+  } else if (currentMapMode === 'topo') {
+    bg.addColorStop(0, '#121008'); bg.addColorStop(0.5, '#0e180e'); bg.addColorStop(1, '#0a1015');
+  } else {
+    bg.addColorStop(0, '#0d1520'); bg.addColorStop(1, '#0a1018');
+  }
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- TERRAIN FEATURES ----
+  if (currentMapMode === 'topo') {
+    // Contour lines
+    const contours = [53.742,53.745,53.748,53.751,53.754,53.757,53.760];
+    contours.forEach((lat, i) => {
+      ctx.strokeStyle = `rgba(60,80,40,${0.15 + i*0.04})`;
+      ctx.lineWidth = 0.8; ctx.setLineDash([]);
+      ctx.beginPath();
+      for (let lng = -1.57; lng <= -1.51; lng += 0.002) {
+        const {x, y} = toScreen(lat + Math.sin(lng*30)*0.001, lng);
+        if (lng === -1.57) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+  }
+
+  if (currentMapMode === 'sat') {
+    // Simulated satellite texture - field patches
+    const patches = [
+      {lat:53.743,lng:-1.555,w:0.008,h:0.005,c:'#0d1f0d'},{lat:53.748,lng:-1.548,w:0.01,h:0.006,c:'#142814'},
+      {lat:53.752,lng:-1.542,w:0.007,h:0.004,c:'#0e1e0a'},{lat:53.756,lng:-1.535,w:0.009,h:0.005,c:'#111f10'},
+      {lat:53.744,lng:-1.530,w:0.008,h:0.007,c:'#141f0a'},{lat:53.750,lng:-1.525,w:0.006,h:0.004,c:'#0c1c0c'},
+    ];
+    patches.forEach(p => {
+      const tl = toScreen(p.lat+p.h, p.lng); const br = toScreen(p.lat, p.lng+p.w);
+      ctx.fillStyle = p.c; ctx.fillRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+    });
+  }
+
+  // ---- GRID LINES ----
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+  const gridStep = 0.005;
+  for (let lat = 53.738; lat <= 53.762; lat += gridStep) {
+    const {x:x1, y:y1} = toScreen(lat, -1.57);
+    const {x:x2, y:y2} = toScreen(lat, -1.51);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  for (let lng = -1.57; lng <= -1.51; lng += gridStep) {
+    const {x:x1, y:y1} = toScreen(53.763, lng);
+    const {x:x2, y:y2} = toScreen(53.737, lng);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+
+  // ---- BUILDINGS (haul roads and structures) ----
+  if (currentMapMode !== 'topo') {
+    const structures = [
+      {lat:53.742,lng:-1.558,lat2:53.743,lng2:-1.552,c:'#1e2e3a'}, // processing plant
+      {lat:53.744,lng:-1.550,lat2:53.745,lng2:-1.546,c:'#1a2530'},
+      {lat:53.756,lng:-1.535,lat2:53.758,lng2:-1.531,c:'#1e2a20'},
+      {lat:53.758,lng:-1.528,lat2:53.760,lng2:-1.524,c:'#1e2530'},
+      {lat:53.748,lng:-1.530,lat2:53.750,lng2:-1.526,c:'#1a2830'},
+    ];
+    structures.forEach(s => {
+      const tl = toScreen(s.lat2, s.lng); const br = toScreen(s.lat, s.lng2);
+      ctx.fillStyle = s.c; ctx.strokeStyle = '#2a4060'; ctx.lineWidth = 1;
+      ctx.fillRect(tl.x, tl.y, Math.abs(br.x-tl.x), Math.abs(br.y-tl.y));
+      ctx.strokeRect(tl.x, tl.y, Math.abs(br.x-tl.x), Math.abs(br.y-tl.y));
+    });
+    // Haul road
+    ctx.strokeStyle = '#2a3040'; ctx.lineWidth = 5 * mapZoomLevel; ctx.lineCap = 'round';
+    ctx.beginPath();
+    [[53.741,-1.558],[53.745,-1.548],[53.750,-1.540],[53.755,-1.530],[53.759,-1.522]].forEach(([lat,lng],i) => {
+      const {x,y} = toScreen(lat,lng);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  // ---- FOLIAGE / CANOPY ----
+  const canopyAreas = [
+    {lat:53.749,lng:-1.542,r:0.004},{lat:53.751,lng:-1.539,r:0.003},
+    {lat:53.753,lng:-1.543,r:0.0035},{lat:53.748,lng:-1.537,r:0.003},
+  ];
+  canopyAreas.forEach(c => {
+    const {x,y} = toScreen(c.lat, c.lng);
+    const rx = c.r * scale; const ry = c.r * scale * 1.4;
+    const grad = ctx.createRadialGradient(x,y,0,x,y,rx);
+    grad.addColorStop(0, 'rgba(20,50,20,0.7)');
+    grad.addColorStop(1, 'rgba(20,50,20,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); ctx.fill();
+  });
+
+  // ---- GEOFENCE ----
+  const geoCorners = [[53.738,-1.562],[53.762,-1.562],[53.762,-1.518],[53.738,-1.518]];
+  ctx.strokeStyle = 'rgba(245,200,66,0.45)'; ctx.lineWidth = 1.5; ctx.setLineDash([10,7]);
+  ctx.beginPath();
+  geoCorners.forEach(([lat,lng],i) => {
+    const {x,y} = toScreen(lat,lng);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+
+  // ---- GNSS DENIED ZONES ----
+  gnssDeniedZones.forEach(z => {
+    const {x,y} = toScreen(z.lat, z.lng);
+    const r = z.r * scale;
+    const grad = ctx.createRadialGradient(x,y,0,x,y,r);
+    grad.addColorStop(0, 'rgba(255,79,109,0.2)'); grad.addColorStop(1, 'rgba(255,79,109,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,79,109,0.6)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
+    // Label
+    ctx.fillStyle = 'rgba(255,79,109,0.8)'; ctx.font = `${Math.max(9,10*mapZoomLevel)}px Space Mono, monospace`;
+    ctx.textAlign = 'center'; ctx.fillText('⚠ GNSS DENIED', x, y - r - 5);
+    ctx.font = `${Math.max(8,9*mapZoomLevel)}px DM Sans, sans-serif`;
+    ctx.fillText(z.label, x, y - r + 8);
+  });
+
+  // ---- PLANNED ROUTE ----
+  if (routeWaypoints.length > 1) {
+    ctx.strokeStyle = 'rgba(0,229,160,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([6,5]);
+    ctx.beginPath();
+    routeWaypoints.forEach(([lat,lng],i) => {
+      const {x,y} = toScreen(lat,lng);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // ---- WAYPOINTS ----
+  const wpIndices = [0, 40, 80, 120, 160, routeWaypoints.length-1].filter(i => i < routeWaypoints.length);
+  wpIndices.forEach((idx, i) => {
+    const [lat,lng] = routeWaypoints[idx];
+    const {x,y} = toScreen(lat,lng);
+    const passed = idx <= state.travelIdx;
+    ctx.fillStyle = passed ? '#3d9eff' : 'rgba(61,158,255,0.35)';
+    ctx.strokeStyle = '#3d9eff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = passed ? '#3d9eff' : 'rgba(61,158,255,0.5)';
+    ctx.font = `${Math.max(8,9*mapZoomLevel)}px Space Mono, monospace`; ctx.textAlign = 'left';
+    ctx.fillText('WP'+(i+1), x+7, y+3);
+  });
+
+  // ---- TRAVELED PATH ----
+  if (traveledCoords.length > 1) {
+    ctx.strokeStyle = '#3d9eff'; ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#3d9eff'; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    traveledCoords.forEach(([lat,lng],i) => {
+      const {x,y} = toScreen(lat,lng);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.shadowBlur = 0;
+  }
+
+  // ---- VEHICLE POSITION ----
+  const idx = Math.min(Math.floor(state.travelIdx), routeWaypoints.length-1);
+  const [vLat,vLng] = routeWaypoints[idx] || [53.750,-1.540];
+  const {x:vx, y:vy} = toScreen(vLat, vLng);
+  const vColor = inDenied ? '#ff4f6d' : '#00e5a0';
+
+  // Uncertainty circle (EKF)
+  ctx.strokeStyle = vColor + '55'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+  const uncertR = state.cep95 * 15 * mapZoomLevel;
+  ctx.beginPath(); ctx.arc(vx,vy,uncertR,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Pulse ring animation
+  const pulseR = uncertR + (animFrame % 60) * 0.3;
+  ctx.strokeStyle = vColor + '22'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(vx,vy,pulseR,0,Math.PI*2); ctx.stroke();
+
+  // Vehicle dot
+  ctx.fillStyle = vColor; ctx.shadowColor = vColor; ctx.shadowBlur = 14;
+  ctx.beginPath(); ctx.arc(vx,vy,7,0,Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff55'; ctx.beginPath(); ctx.arc(vx,vy,3,0,Math.PI*2); ctx.fill();
+
+  // Direction arrow
+  const angle = animFrame * 0.015 + 0.5;
+  const ax = vx + Math.cos(angle)*16, ay = vy + Math.sin(angle)*16;
+  ctx.strokeStyle = vColor; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(ax,ay); ctx.stroke();
+
+  // Vehicle label
+  ctx.fillStyle = vColor; ctx.font = 'bold 10px Space Mono, monospace'; ctx.textAlign = 'left';
+  ctx.shadowColor = vColor; ctx.shadowBlur = 6;
+  ctx.fillText(document.getElementById('vehicleSelect').value, vx+10, vy-8);
+  ctx.shadowBlur = 0;
+
+  // Follow vehicle - pan to keep it centered if follow mode on
+  if (typeof followVehicle !== 'undefined' && followVehicle) {
+    const targetX = W/2 - (vLng - latCenter) * scale;
+    // Smooth pan
+    const latCenter2 = 53.750, lngCenter2 = -1.540;
+    const targetOX = W/2 - (vLng - lngCenter2) * scale;
+    const targetOY = H/2 + (vLat - latCenter2) * scale * 1.4;
+    mapOffsetX += (targetOX - W/2 - mapOffsetX) * 0.05;
+    mapOffsetY += (targetOY - H/2 - mapOffsetY) * 0.05;
+  }
+
+  // ---- COORDINATE LABEL ----
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '9px Space Mono, monospace'; ctx.textAlign = 'left';
+  ctx.fillText(`${vLat.toFixed(5)}°N  ${vLng.toFixed(5)}°E`, 12, H-12);
+
+  // ---- SCALE BAR ----
+  const scalePx = 0.002 * scale; // 200m at current zoom
+  ctx.fillStyle = '#ffffff33'; ctx.fillRect(12, H-30, scalePx, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '8px Space Mono, monospace'; ctx.textAlign = 'left';
+  ctx.fillText('200m', 16 + scalePx, H-26);
+
+  requestAnimationFrame(drawTerrainMap);
+}
+
+function updateMapMarker() {
+  const idx = Math.min(Math.floor(state.travelIdx), routeWaypoints.length - 1);
+  const wp = routeWaypoints[idx];
+  if (!wp) return;
+  traveledCoords.push([wp[0], wp[1]]);
+  if (traveledCoords.length > 600) traveledCoords.shift();
+}
+
+function setMapLayer(mode, el) {
+  currentMapMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+// ===== SKY PLOT =====
+const skyCanvas = document.getElementById('skyCanvas');
+const skyCtx = skyCanvas.getContext('2d');
+const satellites = [
+  {name:'G05',az:30,el:70,type:'GPS',used:true},{name:'G12',az:145,el:45,type:'GPS',used:true},
+  {name:'G19',az:220,el:30,type:'GPS',used:true},{name:'G24',az:310,el:55,type:'GPS',used:true},
+  {name:'R03',az:80,el:25,type:'GLONASS',used:true},{name:'R14',az:195,el:60,type:'GLONASS',used:true},
+  {name:'E09',az:260,el:40,type:'Galileo',used:true},{name:'E22',az:350,el:20,type:'Galileo',used:true},
+  {name:'C11',az:110,el:15,type:'BeiDou',used:false},{name:'C23',az:280,el:35,type:'BeiDou',used:false},
+  {name:'G31',az:170,el:10,type:'GPS',used:false},{name:'R22',az:330,el:12,type:'GLONASS',used:false},
+  {name:'E15',az:55,el:8,type:'Galileo',used:false},{name:'G02',az:235,el:18,type:'GPS',used:false},
+];
+const satColors={GPS:'#00e5a0',GLONASS:'#3d9eff',Galileo:'#f5c842',BeiDou:'#ff8c42'};
+
+function renderSkyPlot() {
+  const S=160, cx=80, cy=80, R=72;
+  const ctx=skyCtx;
+  const inDenied = state.deniedZone !== null || state.faultSimActive;
+  ctx.clearRect(0,0,S,S);
+  ctx.fillStyle='#0f1318';
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+  [1/3,2/3,1].forEach(f=>{
+    ctx.strokeStyle='#2a3448'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,R*f,0,Math.PI*2); ctx.stroke();
+  });
+  ctx.strokeStyle='#2a3448'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
+  ctx.fillStyle='#4a5568'; ctx.font='7px Space Mono, monospace';
+  ctx.fillText('N',cx-3,cy-R+10); ctx.fillText('S',cx-3,cy+R-4);
+  ctx.fillText('E',cx+R-10,cy+3); ctx.fillText('W',cx-R+4,cy+3);
+  satellites.forEach(sat => {
+    // In denied zone, show fewer sats as used
+    const effectiveUsed = inDenied ? (sat.el > 40 && Math.random() > 0.7) : sat.used;
+    const azRad=(sat.az-90)*Math.PI/180;
+    const r=R*(1-sat.el/90);
+    const sx=cx+Math.cos(azRad)*r, sy=cy+Math.sin(azRad)*r;
+    ctx.fillStyle=effectiveUsed?satColors[sat.type]:satColors[sat.type]+'44';
+    if(effectiveUsed){ctx.shadowColor=satColors[sat.type];ctx.shadowBlur=6;}
+    ctx.beginPath(); ctx.arc(sx,sy,effectiveUsed?4:2.5,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=effectiveUsed?satColors[sat.type]:'#4a5568';
+    ctx.font='5px Space Mono, monospace';
+    ctx.fillText(sat.name,sx+5,sy+3);
+  });
+  // Denied overlay
+  if (inDenied) {
+    ctx.fillStyle='rgba(255,79,109,0.12)';
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff4f6d'; ctx.font='bold 8px Space Mono, monospace'; ctx.textAlign='center';
+    ctx.fillText('GNSS DENIED',cx,cy+3);
+    ctx.textAlign='left';
+  }
+}
+
+// ===== FUSION ROWS =====
+const fusionColors={'GNSS/RTK':'#00e5a0','IMU/INS':'#3d9eff','LiDAR SLAM':'#a78bfa','Wheel Odom':'#f5c842','Visual IO':'#ff8c42'};
+function renderFusionRows() {
+  const c=document.getElementById('fusionRows'); if(!c) return;
+  const total = Object.values(state.fusionWeights).reduce((a,b)=>a+b,0);
+  c.innerHTML='';
+  for(const[name,raw] of Object.entries(state.fusionWeights)) {
+    const pct = (raw/total)*100;
+    const row=document.createElement('div'); row.className='fusion-row';
+    row.innerHTML=`<div class="fusion-name">${name}</div><div class="fusion-bar-wrap"><div class="fusion-bar" style="width:${pct.toFixed(1)}%;background:${fusionColors[name]}"></div></div><div class="fusion-pct">${pct.toFixed(0)}%</div>`;
+    c.appendChild(row);
+  }
+}
+
+// ===== ALERTS =====
+function renderAlerts() {
+  const list=document.getElementById('alertList'); if(!list) return;
+  const inDenied = state.deniedZone !== null || state.faultSimActive;
+  const alertData = inDenied ? [
+    {dot:'red',msg:`<strong>GNSS DENIED</strong> — ${state.deniedZone?.label||'Fault sim'} · DR active`,time:'NOW'},
+    {dot:'yellow',msg:'<strong>Camera degraded</strong> — VIO fallback active',time:'09:23'},
+    {dot:'blue',msg:'<strong>LiDAR SLAM</strong> primary localization source',time:'NOW'},
+  ] : [
+    {dot:'yellow',msg:'<strong>Camera degraded</strong> — VIO fallback active',time:'09:23'},
+    {dot:'red',msg:'<strong>Wheel slip</strong> FR — INS compensation active',time:'09:15'},
+    {dot:'blue',msg:'<strong>RTK re-acquired</strong> after 4s float',time:'09:41'},
+  ];
+  list.innerHTML=alertData.map(a=>`<div class="alert-item"><div class="alert-dot ${a.dot}"></div><div class="alert-msg">${a.msg}</div><div class="alert-time">${a.time}</div></div>`).join('');
+}
+
+// ===== LINE CHART =====
+const chartCanvas=document.getElementById('chartCanvas');
+const chartCtx=chartCanvas.getContext('2d');
+const chartConfig={
+  position:{label:'Position Error — CEP95 (m)',color:'#00e5a0',min:0,max:3,threshold:1.0,unit:'m',getter:()=>state.positionHistory},
+  integrity:{label:'System Integrity (%)',color:'#3d9eff',min:60,max:100,threshold:90,unit:'%',getter:()=>state.integrityHistory},
+  velocity:{label:'Speed (km/h)',color:'#f5c842',min:0,max:25,unit:'km/h',getter:()=>state.velocityHistory},
+  drift:{label:'Position Drift (m/min)',color:'#a78bfa',min:0,max:2,threshold:1.0,unit:'m',getter:()=>state.driftHistory},
+};
+
+function resizeChartCanvas(){
+  const r=chartCanvas.parentElement.getBoundingClientRect();
+  chartCanvas.width=r.width; chartCanvas.height=r.height;
+}
+
+function renderLineChart(){
+  const cfg=chartConfig[state.currentChart];
+  const history=cfg.getter();
+  const W=chartCanvas.width, H=chartCanvas.height;
+  const ctx=chartCtx;
+  const pad={top:22,right:20,bottom:30,left:52};
+  const w=W-pad.left-pad.right, h=H-pad.top-pad.bottom;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0c10'; ctx.fillRect(0,0,W,H);
+  const ySteps=5;
+  ctx.font='9px Space Mono, monospace'; ctx.fillStyle='#4a5568';
+  for(let i=0;i<=ySteps;i++){
+    const y=pad.top+h-(i/ySteps)*h;
+    const val=cfg.min+(i/ySteps)*(cfg.max-cfg.min);
+    ctx.strokeStyle='#1c2230'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+w,y); ctx.stroke();
+    ctx.fillText(val.toFixed(val<10?1:0),4,y+3);
+  }
+  if(cfg.threshold){
+    const thY=pad.top+h-((cfg.threshold-cfg.min)/(cfg.max-cfg.min))*h;
+    ctx.strokeStyle='#ff4f6d55'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.left,thY); ctx.lineTo(pad.left+w,thY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#ff4f6d88';
+    ctx.fillText('LIMIT',pad.left+w-30,thY-3);
+  }
+  const n=history.length; if(n<2) return;
+  const grad=ctx.createLinearGradient(0,pad.top,0,pad.top+h);
+  grad.addColorStop(0,cfg.color+'33'); grad.addColorStop(1,cfg.color+'00');
+  ctx.fillStyle=grad; ctx.beginPath();
+  history.forEach(({v},i)=>{
+    const x=pad.left+(i/(n-1))*w;
+    const y=pad.top+h-clamp((v-cfg.min)/(cfg.max-cfg.min),0,1)*h;
+    if(i===0)ctx.moveTo(x,pad.top+h); ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.left+w,pad.top+h); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=cfg.color; ctx.lineWidth=1.5;
+  ctx.shadowColor=cfg.color; ctx.shadowBlur=4; ctx.beginPath();
+  history.forEach(({v},i)=>{
+    const x=pad.left+(i/(n-1))*w;
+    const y=pad.top+h-clamp((v-cfg.min)/(cfg.max-cfg.min),0,1)*h;
+    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke(); ctx.shadowBlur=0;
+  const last=history[n-1];
+  const lx=pad.left+w, ly=pad.top+h-clamp((last.v-cfg.min)/(cfg.max-cfg.min),0,1)*h;
+  ctx.fillStyle=cfg.color; ctx.shadowColor=cfg.color; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='#4a5568'; ctx.fillText('← 200s ago',pad.left,H-8);
+  ctx.fillText('NOW →',pad.left+w-35,H-8);
+  ctx.fillStyle='#8a96aa'; ctx.font='10px DM Sans, sans-serif';
+  ctx.fillText(cfg.label,pad.left,pad.top-6);
+}
+
+function switchChart(mode,el){
+  state.currentChart=mode;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderLineChart();
+}
+
+// ===== FAULT MODAL =====
+function openFaultModal(){
+  const tbody=document.getElementById('faultBody');
+  const sc={WARN:'yellow',INFO:'blue',CRIT:'fault'};
+  tbody.innerHTML=faults.map(f=>`<tr>
+    <td><span class="status-state ${sc[f.severity]||'ok'}">${f.severity}</span></td>
+    <td style="color:var(--text)">${f.sensor}</td>
+    <td>${f.desc}</td>
+    <td style="font-family:var(--font-mono);font-size:0.7rem">${f.time}</td>
+    <td><span class="status-state ${f.status==='ACTIVE'?'warn':'ok'}">${f.status}</span></td>
+  </tr>`).join('');
+  const bd=document.getElementById('integrityBreakdown');
+  const items=[
+    {label:'GNSS Integrity',pct:state.deniedZone?45:97,color:'#00e5a0'},
+    {label:'IMU/INS Health',pct:99,color:'#3d9eff'},
+    {label:'LiDAR SLAM',pct:state.deniedZone?98:95,color:'#a78bfa'},
+    {label:'Camera / VIO',pct:71,color:'#ff8c42'},
+    {label:'Fusion Coherence',pct:Math.round(state.integrity),color:'#f5c842'},
+  ];
+  bd.innerHTML=items.map(item=>`<div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;">
+    <div style="width:110px;color:var(--text-dim);">${item.label}</div>
+    <div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;"><div style="width:${item.pct}%;height:100%;background:${item.color};border-radius:3px;"></div></div>
+    <div style="width:36px;text-align:right;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);">${item.pct}%</div>
+  </div>`).join('');
+  document.getElementById('faultModal').classList.add('open');
+}
+function closeFaultModal(e){ if(e.target===document.getElementById('faultModal')) document.getElementById('faultModal').classList.remove('open'); }
+function clearFaults(){ const active=faults.filter(f=>f.status==='ACTIVE'); faults.splice(0,faults.length,...active); openFaultModal(); }
+
+// ===== FAULT SIMULATION =====
+function simulateFault(){
+  if(state.faultSimActive) return;
+  state.faultSimActive=true;
+  state.gnssMode='DEAD-RECK'; state.satsUsed=1; state.pdop=18;
+  state.deniedZone={label:'SIM: GNSS Signal Loss'};
+  faults.unshift({severity:'CRIT',sensor:'GNSS',desc:'Signal loss — entering dead-reckoning. INS+LiDAR primary.',time:new Date().toTimeString().slice(0,8),status:'ACTIVE'});
+  updateAlertBadge();
+  document.getElementById('drBanner').style.display='flex';
+  document.getElementById('missionLabel').textContent='⚠ GNSS DENIED — DEAD RECKONING ACTIVE';
+  setTimeout(()=>{
+    state.faultSimActive=false;
+    state.deniedZone=null;
+    state.gnssMode='RTK-FIX'; state.satsUsed=8; state.pdop=1.2;
+    state.cep95=0.28; state.integrity=93;
+    state.fusionWeights={'GNSS/RTK':42,'IMU/INS':28,'LiDAR SLAM':18,'Wheel Odom':8,'Visual IO':4};
+    if(faults[0].status==='ACTIVE') faults[0].status='RESOLVED';
+    updateAlertBadge();
+    document.getElementById('drBanner').style.display='none';
+    document.getElementById('missionLabel').textContent='MISSION ACTIVE — ROUTE C7-NORTH';
+  }, 10000);
+}
+function updateAlertBadge(){
+  const n=faults.filter(f=>f.status==='ACTIVE').length;
+  document.getElementById('alertBadge').textContent=`⚠ ${n} ACTIVE FAULT${n!==1?'S':''}`;
+}
+
+// ===== MAP CONTROLS =====
+function mapZoom(factor) {
+  mapZoomLevel = clamp(mapZoomLevel * factor, 0.3, 6.0);
+}
+function mapCenter() {
+  mapOffsetX = 0; mapOffsetY = 0;
+}
+let followVehicle = true;
+function toggleFollow(el) {
+  followVehicle = !followVehicle;
+  if (followVehicle) {
+    el.style.color = 'var(--green)';
+    el.style.borderColor = 'var(--green-mid)';
+    el.style.background = 'var(--green-dim)';
+    el.title = 'Following Vehicle';
+  } else {
+    el.style.color = 'var(--text-dim)';
+    el.style.borderColor = 'var(--border)';
+    el.style.background = 'rgba(10,12,16,0.9)';
+    el.title = 'Follow Vehicle (off)';
+  }
+}
+
+// ===== SIMULATE SENSOR FAULT =====
+function simulateSensorFault() {
+  const btn = document.getElementById('sensorFaultBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  // Simulate IMU spike + camera total failure
+  const origIntegrity = state.integrity;
+  const origCep = state.cep95;
+  const origDrift = state.drift;
+  const origWeights = {...state.fusionWeights};
+
+  // Inject fault
+  state.integrity = clamp(state.integrity - 22, 55, 99);
+  state.cep95 = clamp(state.cep95 + 0.9, 0.8, 2.2);
+  state.drift = clamp(state.drift + 0.6, 0.6, 1.8);
+  state.headingErr = clamp(state.headingErr + 1.1, 0.8, 2.5);
+
+  // Camera goes dark, IMU bias spike
+  state.fusionWeights['Visual IO'] = 0;
+  state.fusionWeights['IMU/INS'] = 8;   // degraded
+  state.fusionWeights['LiDAR SLAM'] = 38; // LiDAR picks up slack
+  state.fusionWeights['GNSS/RTK'] = 46;
+  state.fusionWeights['Wheel Odom'] = 8;
+
+  // Update sensor rows visually
+  const camState = document.getElementById('row-camera');
+  if (camState) {
+    camState.querySelector('.status-state').textContent = 'FAILED';
+    camState.querySelector('.status-state').className = 'status-state fault';
+  }
+  const imuState = document.getElementById('imu-state');
+  if (imuState) { imuState.textContent = 'BIAS SPIKE'; imuState.className = 'status-state fault'; }
+
+  // Log faults
+  const now = new Date().toTimeString().slice(0,8);
+  faults.unshift({severity:'CRIT',sensor:'Stereo Camera',desc:'Camera feed lost — VIO weight zeroed, LiDAR SLAM primary',time:now,status:'ACTIVE'});
+  faults.unshift({severity:'CRIT',sensor:'IMU',desc:'Gyro bias spike detected (+12×) — innovation monitor triggered',time:now,status:'ACTIVE'});
+  updateAlertBadge();
+
+  // Banner
+  const banner = document.getElementById('drBanner');
+  if (banner) { banner.style.display='flex'; banner.textContent='⚠ SENSOR FAULT — IMU BIAS + CAMERA FAILED · LiDAR SLAM ACTIVE'; }
+
+  // Recover after 12s
+  setTimeout(() => {
+    state.integrity = origIntegrity;
+    state.cep95 = origCep + 0.05;
+    state.drift = origDrift;
+    state.headingErr = clamp(origDrift * 0.3, 0.1, 0.8);
+    state.fusionWeights = origWeights;
+
+    if (camState) {
+      camState.querySelector('.status-state').textContent = 'DEGRADED';
+      camState.querySelector('.status-state').className = 'status-state warn';
+    }
+    if (imuState) { imuState.textContent = 'ACTIVE'; imuState.className = 'status-state ok'; }
+
+    faults[0].status = 'RESOLVED';
+    faults[1].status = 'RESOLVED';
+    updateAlertBadge();
+
+    if (banner && !state.deniedZone && !state.faultSimActive) banner.style.display='none';
+
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }, 12000);
+}
+
+// ===== VIEW SWITCHING =====
+function switchView(view,btnEl){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btnEl)btnEl.classList.add('active');
+  ['fleet','routes','sensors'].forEach(v=>{
+    const el=document.getElementById('view-'+v);
+    if(el)el.style.display='none';
+  });
+  if(view==='dashboard') return;
+  const el=document.getElementById('view-'+view);
+  if(!el) return;
+  el.style.display='block';
+  if(view==='fleet') renderFleetView();
+  else if(view==='routes') renderRoutesView();
+  else if(view==='sensors') renderSensorsView();
+
+}
+
+// ===== FLEET VIEW =====
+const fleetVehicles=[
+  {id:'LDR-001',name:'Loader Alpha',icon:'🚜',type:'Caterpillar 966 Loader',status:'ACTIVE',gnss:'RTK-FIX',cep:0.23,speed:8.3,route:'C7-NORTH',progress:62,integrity:94},
+  {id:'DMP-003',name:'Dumper Beta',icon:'🚛',type:'Komatsu HD785 Dumper',status:'ACTIVE',gnss:'RTK-FIX',cep:0.41,speed:12.1,route:'D2-EAST',progress:31,integrity:91},
+  {id:'TRC-007',name:'Tractor Gamma',icon:'🚧',type:'John Deere 9R Tractor',status:'IDLE',gnss:'SBAS',cep:0.88,speed:0,route:'STAGING',progress:100,integrity:88},
+];
+function renderFleetView(){
+  const selected=document.getElementById('vehicleSelect').value;
+  document.getElementById('fleetGrid').innerHTML=fleetVehicles.map(v=>`<div class="fleet-card ${v.id===selected?'active-vehicle':''}" onclick="selectFleetVehicle('${v.id}')">
+    <div class="fleet-card-header"><span class="fleet-icon">${v.icon}</span><div><div class="fleet-name">${v.id} — ${v.name}</div><div class="fleet-type">${v.type}</div></div><div class="fleet-online"><span class="status-state ${v.status==='ACTIVE'?'ok':'off'}">${v.status}</span></div></div>
+    <div class="fleet-metrics">
+      <div class="fleet-metric"><div class="fleet-metric-label">CEP95</div><div class="fleet-metric-val" style="color:${v.cep<0.5?'var(--green)':v.cep<1.0?'var(--yellow)':'var(--red)'}">${v.cep.toFixed(2)}m</div></div>
+      <div class="fleet-metric"><div class="fleet-metric-label">Speed</div><div class="fleet-metric-val">${v.speed.toFixed(1)} km/h</div></div>
+      <div class="fleet-metric"><div class="fleet-metric-label">GNSS</div><div class="fleet-metric-val" style="font-size:0.7rem;color:${v.gnss==='RTK-FIX'?'var(--green)':'var(--yellow)'}">${v.gnss}</div></div>
+    </div>
+    <div class="fleet-bar-row"><div class="fleet-bar-label"><span>Route: ${v.route}</span><span style="color:var(--green)">${v.progress}%</span></div><div class="bar-track"><div class="bar-fill" style="width:${v.progress}%"></div></div></div>
+    <div class="fleet-bar-row"><div class="fleet-bar-label"><span>Integrity</span><span style="color:${v.integrity>90?'var(--green)':'var(--yellow)'}">${v.integrity}%</span></div><div class="bar-track"><div class="bar-fill ${v.integrity>90?'':'yellow'}" style="width:${v.integrity}%"></div></div></div>
+    <div style="display:flex;gap:6px;"><button class="small-btn primary" style="flex:1" onclick="event.stopPropagation();selectAndGoToDashboard('${v.id}')">Select</button></div>
+  </div>`).join('');
+}
+function selectFleetVehicle(id){ document.getElementById('vehicleSelect').value=id; changeVehicle(id); }
+function selectAndGoToDashboard(id){ selectFleetVehicle(id); switchView('dashboard',document.getElementById('nav-dashboard')); }
+
+// ===== ROUTES VIEW =====
+const routeData=[
+  {id:'C7-NORTH',name:'Zone C7 — Northern Loop',vehicle:'LDR-001',distance:'5.2 km',duration:'~38 min',wps:12,progress:62,status:'active',terrain:'Open pit + canopy section',env:'Dusty · Partial GNSS'},
+  {id:'D2-EAST',name:'Zone D2 — Eastern Haul',vehicle:'DMP-003',distance:'3.8 km',duration:'~22 min',wps:8,progress:31,status:'active',terrain:'Haul road · Urban canyon at WP4',env:'RTK available'},
+  {id:'STAGING',name:'Staging Area Loop',vehicle:'TRC-007',distance:'0.6 km',duration:'~5 min',wps:4,progress:100,status:'done',terrain:'Flat · Open sky',env:'Full RTK-FIX'},
+  {id:'B4-SOUTH',name:'Zone B4 — Southern Access',vehicle:'—',distance:'7.1 km',duration:'~55 min',wps:18,progress:0,status:'pending',terrain:'Dense forestry + slope',env:'GNSS challenged'},
+  {id:'MINE-CORE',name:'Mine Core Transit',vehicle:'—',distance:'2.3 km',duration:'~14 min',wps:6,progress:0,status:'pending',terrain:'Underground section',env:'GNSS denied · INS only'},
+];
+function renderRoutesView(){
+  document.getElementById('routesList').innerHTML=routeData.map(r=>`<div class="route-card route-${r.status}">
+    <div><div class="route-id">${r.id}</div><div class="route-name">${r.name}</div><div class="route-detail">${r.terrain} · ${r.env}</div><div class="route-progress-wrap"><div class="route-progress-fill" style="width:${r.progress}%;background:${r.status==='active'?'var(--green)':r.status==='done'?'var(--blue)':'var(--border)'}"></div></div></div>
+    <div class="route-stats">
+      <div class="route-stat"><div class="route-stat-val">${r.distance}</div><div class="route-stat-lbl">Distance</div></div>
+      <div class="route-stat"><div class="route-stat-val">${r.wps}</div><div class="route-stat-lbl">Waypoints</div></div>
+      <div class="route-stat"><div class="route-stat-val">${r.duration}</div><div class="route-stat-lbl">ETA</div></div>
+      <div class="route-stat"><div class="route-stat-val" style="font-size:0.75rem;color:var(--text-dim)">${r.vehicle}</div><div class="route-stat-lbl">Vehicle</div></div>
+    </div>
+    <div><span class="status-state ${r.status==='active'?'ok':r.status==='done'?'off':'warn'}">${r.status.toUpperCase()}</span>${r.progress>0&&r.progress<100?`<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--green);margin-top:4px">${r.progress}%</div>`:''}</div>
+  </div>`).join('');
+}
+
+// ===== SENSORS VIEW =====
+const sensorDetails=[
+  {name:'GNSS Dual-Frequency Receiver',icon:'🛰',status:'ok',statusText:'RTK-FIX',params:[{label:'Fix Type',val:'RTK-Fixed',color:'var(--green)'},{label:'Satellites',val:'8 / 14 visible',color:''},{label:'PDOP',val:'1.24',color:''},{label:'HPE',val:'0.18 m',color:'var(--green)'},{label:'VPE',val:'0.31 m',color:'var(--green)'},{label:'Update Rate',val:'10 Hz',color:''}],health:97,notes:'L1/L2 dual-frequency · GPS + GLONASS + Galileo + BeiDou · RTK corrections via UHF radio'},
+  {name:'Tactical IMU (6-DOF)',icon:'⚡',status:'ok',statusText:'ACTIVE',params:[{label:'Gyro Bias',val:'0.003 °/hr',color:'var(--green)'},{label:'Accel Noise',val:'0.8 mg',color:''},{label:'Rate',val:'200 Hz',color:''},{label:'Temp',val:'52.3 °C',color:'var(--yellow)'},{label:'In-Run Stab',val:'GOOD',color:'var(--green)'},{label:'Cal Age',val:'0d 4h',color:''}],health:99,notes:'Auto-recalibration every 30 min. Bias compensation active. Temp within operating range.'},
+  {name:'LiDAR 3D (128-channel)',icon:'🔴',status:'ok',statusText:'ACTIVE',params:[{label:'Scan Rate',val:'10 Hz',color:''},{label:'Range',val:'120 m',color:''},{label:'Points/sec',val:'1.28M',color:''},{label:'SLAM Conf.',val:'96.4%',color:'var(--green)'},{label:'Loop Closures',val:'14',color:''},{label:'Map Drift',val:'< 0.05m',color:'var(--green)'}],health:95,notes:'LOAM pipeline active. Primary localization in GNSS-denied zones. Dust filter engaged.'},
+  {name:'Stereo Camera (VIO)',icon:'📷',status:'warn',statusText:'DEGRADED',params:[{label:'Frame Rate',val:'20 Hz',color:''},{label:'Baseline',val:'12 cm',color:''},{label:'VIO Conf.',val:'68.2%',color:'var(--yellow)'},{label:'Feature Pts',val:'214/800',color:'var(--yellow)'},{label:'Lens Clarity',val:'61%',color:'var(--red)'},{label:'Last Clean',val:'2h 14m ago',color:'var(--yellow)'}],health:71,notes:'⚠ Lens contamination. Weight reduced in EKF — LiDAR SLAM compensating. Schedule cleaning.'},
+  {name:'Wheel Odometry (4x)',icon:'⚙️',status:'ok',statusText:'ACTIVE',params:[{label:'Update Rate',val:'100 Hz',color:''},{label:'Encoder Res',val:'4096 PPR',color:''},{label:'Slip Detect',val:'Active',color:''},{label:'FR Wheel',val:'SLIP x1',color:'var(--yellow)'},{label:'Heading Acc',val:'± 0.2°',color:'var(--green)'},{label:'Velocity Err',val:'< 0.1 m/s',color:'var(--green)'}],health:92,notes:'FR wheel: 1 slip event logged and compensated by INS. Dead-reckoning capable at 100Hz.'},
+  {name:'RTK Base Station Link',icon:'📡',status:'ok',statusText:'CONNECTED',params:[{label:'Link Type',val:'UHF Radio',color:''},{label:'RSSI',val:'-68 dBm',color:'var(--green)'},{label:'Latency',val:'85 ms',color:''},{label:'Corr Rate',val:'1 Hz',color:''},{label:'Baseline',val:'1.24 km',color:''},{label:'Uptime',val:'99.8%',color:'var(--green)'}],health:98,notes:'Stable link to base at Site HQ. Failover to NTRIP if radio drops. Corrections within spec.'},
+];
+function renderSensorsView(){
+  document.getElementById('sensorsGrid').innerHTML=sensorDetails.map(s=>`<div class="sensor-detail-card">
+    <div class="sensor-detail-header"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.5rem">${s.icon}</span><div class="sensor-detail-name">${s.name}</div></div><span class="status-state ${s.status==='ok'?'ok':'warn'}">${s.statusText}</span></div>
+    <div class="sensor-detail-params">${s.params.map(p=>`<div class="sensor-param"><div class="sensor-param-label">${p.label}</div><div class="sensor-param-val" style="${p.color?'color:'+p.color:''}">${p.val}</div></div>`).join('')}</div>
+    <div><div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text-dim);margin-bottom:4px"><span>Health Score</span><span style="color:${s.health>90?'var(--green)':s.health>75?'var(--yellow)':'var(--red)'};font-family:var(--font-mono)">${s.health}%</span></div><div class="sensor-health-bar"><div class="sensor-health-fill" style="width:${s.health}%;background:${s.health>90?'var(--green)':s.health>75?'var(--yellow)':'var(--red)'}"></div></div></div>
+    <div style="font-size:0.7rem;color:var(--text-faint);line-height:1.5;border-top:1px solid var(--border);padding-top:8px">${s.notes}</div>
+  </div>`).join('');
+}
+
+// ===== VEHICLE CHANGE =====
+function changeVehicle(v){
+  const types={
+    'LDR-001':{label:'Caterpillar 966 Loader · Mining Site',icon:'🚜'},
+    'DMP-003':{label:'Komatsu HD785 Dumper · Haul Road',icon:'🚛'},
+    'TRC-007':{label:'John Deere 9R Tractor · Staging',icon:'🚧'},
+  };
+  const info=types[v]||types['LDR-001'];
+  setText('vehicleId',v);
+  setText('vehicleTypeLabel',info.label);
+  document.querySelector('.vehicle-icon').textContent=info.icon;
+  buildRouteWaypoints(); state.travelIdx=0; traveledCoords=[];
+  traveledCoords = [];
+}
+
+// ===== EXPORT =====
+function exportData(){
+  const report={
+    exportTime:new Date().toISOString(),
+    vehicle:document.getElementById('vehicleSelect').value,
+    session:{duration:document.getElementById('duration').textContent,distance:state.distance.toFixed(3)+' km',cep95:state.cep95.toFixed(3)+' m',integrity:state.integrity.toFixed(1)+'%',availability:state.availability.toFixed(1)+'%',avgLatency:state.latency.toFixed(0)+' ms',headingError:state.headingErr.toFixed(2)+'°',driftPerMin:state.drift.toFixed(2)+' m/min',gnssMode:state.gnssMode,satsInUse:state.satsUsed},
+    pilotResults:{urbanCEP95:'0.31m',forestCEP95:'0.44m',mineCEP95:'0.38m',overallPassRate:'5/6 specs'},
+    faults:faults,fusionWeights:state.fusionWeights,
+  };
+  const uri='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(report,null,2));
+  const a=document.createElement('a'); a.href=uri; a.download=`terrafix-v2-report-${Date.now()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ===== INIT =====
+function init(){
+  resizeChartCanvas();
+  window.addEventListener('resize',resizeChartCanvas);
+  initTerrainCanvas();
+  renderFusionRows();
+  renderAlerts();
+  renderSkyPlot();
+  renderLineChart();
+}
+init();
+</script>
+</body>
+</html>
